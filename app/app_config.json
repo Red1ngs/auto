@@ -1,0 +1,29 @@
+{
+    "base_config": {
+        "app_name": "Auto Looter",
+        "version": "1.0.0",
+        "description": "An auto looter for manga buffs",
+        "reader": {
+            "modes": {
+                "tokens": {
+                    "match": "OR",
+                    "request_delay": 250,
+                    "hallmarks": [
+                        {"key": "type", "value": "candy"},
+                        {"key": "type", "value": "pumpkin"}
+                    ],
+                    "how_many": 60
+                },
+                "cards": {
+                    "match": "AND",
+                    "request_delay": 4800,
+                    "hallmarks": [
+                        {"key": "image"}, 
+                        {"key": "id"}
+                    ],
+                    "how_many": 10
+                }
+            }
+        }
+    }
+}

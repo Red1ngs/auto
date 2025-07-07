@@ -1,4 +1,7 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field
+
+from utils.http_defaults import base_cookie, base_headers
 
 class Headers(BaseModel):
     """HTTP-Headers Model"""
@@ -20,9 +23,9 @@ class Headers(BaseModel):
         extra = "forbid"
         populate_by_name = True  
     
+    
 class Cookie(BaseModel):
     """Cookie Model"""
-    remember_web_: str
     XSRF_TOKEN: str = Field(alias="XSRF-TOKEN")
     mangabuff_session: str
     ddg9: str = Field(alias="__ddg9_")
@@ -32,10 +35,19 @@ class Cookie(BaseModel):
         extra = "forbid"
         populate_by_name = True  
 
+
 class Account_http_data(BaseModel):
     cookie: Cookie
     headers: Headers
+    proxy: str | None = None
 
     class Config:
         extra = "allow"
-        populate_by_name = True  
+        populate_by_name = True
+
+    def is_default(self) -> bool:
+        return (
+            self.cookie == Cookie(**base_cookie()) and
+            self.headers == Headers(**base_headers())
+        )
+
