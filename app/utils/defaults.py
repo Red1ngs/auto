@@ -1,3 +1,4 @@
+import time
 from typing import Dict
 
 def base_headers() -> Dict[str, str]:
@@ -12,7 +13,7 @@ def base_headers() -> Dict[str, str]:
         "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-User": "?1",
         "Priority": "u=0, i",
-        "User-Agent": "",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
         "x-csrf-token": "",
         "x-requested-with": "XMLHttpRequest"
     }
@@ -30,6 +31,7 @@ def base_network_config() -> Dict[str, str]:
         "cookie": base_cookie(),
         "headers": base_headers(),
         "base_url": "https://mangabuff.ru",
+        "data_time": int(time.time() * 1000),
         "retries": 3,
         "timeout": 360
     }

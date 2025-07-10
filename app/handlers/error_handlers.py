@@ -3,7 +3,7 @@ import logging
 from typing import Callable, TypeVar, ParamSpec, cast
 import functools
 
-from exceptions.exceptions import AppError
+from app.exceptions.exceptions import AppError
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)

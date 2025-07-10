@@ -1,57 +1,101 @@
-from pathlib import Path
-import json
-from typing import Any, Callable, Optional
+# utils.file_utils.py
 
-from exceptions.exceptions import (
+from __future__ import annotations
+from pathlib import Path
+from typing import Any, Callable, Optional, Union
+import json
+import logging
+
+from app.exceptions.exceptions import (
     ProfileDirNotFoundError, ProfileNetworkConfigNotFoundError, AppError
-    )
+)
+from app.handlers.error_handlers import handle_app_errors
+
+logger = logging.getLogger(__name__)
+
 
 class FileInitializer:
+    DEFAULT_ENCODING = "utf-8"
+    DEFAULT_INDENT = 2
+    DEFAULT_SORT_KEYS = False
+    DEFAULT_ASCII = False
+
     @staticmethod
-    def ensure_directory(path: Path, raise_error: bool = False, on_error: Optional[Callable] = None) -> None:
+    def ensure_directory(path: Union[str, Path], raise_error: bool = False, on_error: Optional[Callable] = None) -> None:
+        path = Path(path)
         if not path.exists():
             try:
                 path.mkdir(parents=True, exist_ok=True)
             except Exception as e:
+                logger.error(f"Failed to create directory: {path}", exc_info=True)
                 if raise_error:
-                    raise ProfileDirNotFoundError(
-                        f"Directory {path} could not be created.",
-                        on_error=on_error
-                    ) from e
+                    raise ProfileDirNotFoundError(f"Directory {path} could not be created.", on_error=on_error) from e
 
     @staticmethod
-    def ensure_json_file(
-        path: Path,
-        default_data: Any = {},
+    def ensure_file_with_content(
+        path: Union[str, Path],
+        content: str | dict | list = "",
+        is_json: bool = False,
         raise_error: bool = False,
         on_error: Optional[Callable] = None
     ) -> None:
+        path = Path(path)
         if not path.exists():
             try:
                 FileInitializer.ensure_directory(path.parent)
-                with path.open("w", encoding="utf-8") as f:
-                    json.dump(default_data, f, indent=2, ensure_ascii=False)
+
+                if is_json:
+                    with path.open("w", encoding=FileInitializer.DEFAULT_ENCODING) as f:
+                        json.dump(
+                            content or {},
+                            f,
+                            indent=FileInitializer.DEFAULT_INDENT,
+                            ensure_ascii=FileInitializer.DEFAULT_ASCII,
+                            sort_keys=FileInitializer.DEFAULT_SORT_KEYS
+                        )
+                else:
+                    path.write_text(str(content), encoding=FileInitializer.DEFAULT_ENCODING)
             except Exception as e:
+                logger.error(f"Failed to create file: {path}", exc_info=True)
+                err_cls = ProfileNetworkConfigNotFoundError if is_json else AppError
                 if raise_error:
-                    raise ProfileNetworkConfigNotFoundError(
-                        f"JSON file {path} could not be created.",
-                        on_error=on_error
-                    ) from e
+                    raise err_cls(f"File {path} could not be created.", on_error=on_error) from e
 
     @staticmethod
-    def ensure_file(
-        path: Path,
-        content: str = "",
-        raise_error: bool = False,
-        on_error: Optional[Callable] = None
-    ) -> None:
+    def delete_file(path: Union[str, Path]) -> None:
+        path = Path(path)
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception:
+            logger.warning(f"Could not delete file: {path}", exc_info=True)
+
+    @staticmethod
+    @handle_app_errors(raise_on_fail=True)
+    def read_json(path: Union[str, Path], default: Any = None) -> Any:
+        path = Path(path)
         if not path.exists():
-            try:
-                FileInitializer.ensure_directory(path.parent)
-                path.write_text(content, encoding="utf-8")
-            except Exception as e:
-                if raise_error:
-                    raise AppError(
-                        f"File {path} could not be created.",
-                        on_error=on_error
-                    ) from e
+            return default if default is not None else {}
+
+        with path.open("r", encoding=FileInitializer.DEFAULT_ENCODING) as f:
+            return json.load(f)
+
+    @staticmethod
+    @handle_app_errors(raise_on_fail=True)
+    def write_json(
+        data: Any,
+        path: Union[str, Path],
+        *,
+        indent: int = DEFAULT_INDENT,
+        sort_keys: bool = DEFAULT_SORT_KEYS,
+        ensure_ascii: bool = DEFAULT_ASCII,
+        overwrite: bool = True
+    ) -> None:
+        path = Path(path)
+        if not overwrite and path.exists():
+            raise FileExistsError(f"Файл уже существует: {path}")
+
+        FileInitializer.ensure_directory(path.parent)
+
+        with path.open("w", encoding=FileInitializer.DEFAULT_ENCODING) as f:
+            json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii, sort_keys=sort_keys)

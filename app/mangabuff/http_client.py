@@ -5,15 +5,15 @@ import requests
 
 from typing import Dict, Union, Optional, TYPE_CHECKING
 
-from handlers.http_handlers import log_http_request
+from app.handlers.http_handlers import log_http_request
 
 if TYPE_CHECKING:
-    from schemas.models import Account_http_data
+    from app.schemas.models.http_model import AccountHTTPData
 
 logger = logging.getLogger(__name__)
 
 class HttpClient:
-    def __init__(self, http_data: Union[None, Account_http_data], *, use_account: bool = True):
+    def __init__(self, http_data: Union[None, AccountHTTPData], *, use_account: bool = True):
         self.headers = http_data.headers.model_dump() if use_account else {}
         self.cookie = http_data.cookie.model_dump() if use_account else {}
         self.use_account = use_account
