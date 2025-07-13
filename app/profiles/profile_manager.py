@@ -4,13 +4,18 @@ from pathlib import Path
 from dataclasses import dataclass
 
 from app.schemas.models.http_model import AccountHTTPData
-from app.exceptions.exceptions import (
-    AppError, ProfileNetworkConfigEmptyError
-)
+from app.schemas.models.profile_config_model import AccountReaderSettings
+from app.schemas.models.profile_stats_model import AccountStats
+
+from app.exceptions.registration_exception import ProfileNetworkConfigEmptyException, ProfileReaderConfigNotFoundException
+from app.exceptions.base_exceptions import AppError
+
 from app.utils.paths import ACCOUNTS_DIR
 from app.utils.file_utils import FileInitializer
-from app.utils.defaults import base_network_config
+from app.utils.defaults import base_network_config, base_profile_config
+
 from app.handlers.error_handlers import handle_app_errors
+
 from app.mangabuff.http_client import HttpClient
 
 logger = logging.getLogger(__name__)
@@ -20,26 +25,23 @@ logger = logging.getLogger(__name__)
 class ProfilePaths:
     """Централізовані шляхи профілю для кращого управління"""
     profile_dir: Path
-    reader_dir: Path
-    cards_images_dir: Path
+    images_dir: Path
     network_config_path: Path
-    reader_config_path: Path
-    reader_stats_path: Path
+    profile_config_path: Path
+    profile_stats_path: Path
     avatar_path: Path
 
     @classmethod
     def from_user_id(cls, user_id: str) -> "ProfilePaths":
         """Створити ProfilePaths з user_id"""
         profile_dir = ACCOUNTS_DIR / user_id
-        reader_dir = profile_dir / "reader"
         
         return cls(
             profile_dir=profile_dir,
-            reader_dir=reader_dir,
-            cards_images_dir=reader_dir / "cards_images",
+            images_dir=profile_dir / "images",
             network_config_path=profile_dir / "network_config.json",
-            reader_config_path=reader_dir / "reader_config.json",
-            reader_stats_path=reader_dir / "reader_stats.json",
+            profile_config_path=profile_dir / "profile_config.json",
+            profile_stats_path=profile_dir / "profile_stats.json",
             avatar_path=profile_dir / "avatar.png"
         )
 
@@ -51,6 +53,7 @@ class Profile:
         self.user_id = user_id
         self.paths = ProfilePaths.from_user_id(user_id)
         self._initialize_profile()
+        
         self.storage = ProfileStorage(self)
         self.http = ProfileHTTP(self)
 
@@ -71,8 +74,7 @@ class Profile:
         """Створення необхідних директорій"""
         directories = [
             self.paths.profile_dir,
-            self.paths.reader_dir,
-            self.paths.cards_images_dir
+            self.paths.images_dir
         ]
         
         for directory in directories:
@@ -83,8 +85,8 @@ class Profile:
         """Створення конфігураційних файлів"""
         config_files = [
             (self.paths.network_config_path, base_network_config()),
-            (self.paths.reader_config_path, self._get_default_reader_config()),
-            (self.paths.reader_stats_path, {})
+            (self.paths.profile_config_path, base_profile_config()),
+            (self.paths.profile_stats_path, {})
         ]
         
         for file_path, content in config_files:
@@ -95,15 +97,6 @@ class Profile:
                 is_json=True
             )
             logger.debug(f"Config file ensured: {file_path}")
-
-    @staticmethod
-    def _get_default_reader_config() -> Dict[str, Any]:
-        """Отримати конфігурацію читача за замовчуванням"""
-        return {
-            "batch_size": 2,
-            "batch_limit": 100,
-            "current_mode": "tokens"
-        }
 
     def __str__(self) -> str:
         return f"Profile(user_id='{self.user_id}')"
@@ -124,45 +117,51 @@ class ProfileStorage:
         """Ініціалізація сховища профілю"""
         logger.info(f"Initializing storage for profile: {self.profile.user_id}")
         
-        self.http_data = self._load_http_data()
         self.profile_settings = self._load_profile_settings()
         self.profile_stats = self._load_profile_stats()
         
         logger.info(f"Storage initialized for profile: {self.profile.user_id}")
 
-    @handle_app_errors(raise_on_fail=False)
-    def _load_profile_settings(self) -> Optional[Dict[str, Any]]:
-        """Завантажити налаштування профілю"""
-        # TODO: Реалізувати завантаження налаштувань
-        logger.debug("Profile settings loading not implemented yet")
-        return None
+    def _load_json_config(self, path: Path, model_cls, *, default=None, raise_error=False, on_error=None) -> Optional[Any]:
+        FileInitializer.ensure_file_with_content(
+            path,
+            content=default() if default else None,
+            is_json=True,
+            raise_error=raise_error,
+            on_error=on_error,
+        )
+        data = model_cls.from_json(path)
+        logger.debug(f"{model_cls.__name__} loaded for profile: {self.profile.user_id}")
+        return data
 
-    @handle_app_errors(raise_on_fail=False)
-    def _load_profile_stats(self) -> Optional[Dict[str, Any]]:
+    def _load_profile_settings(self) -> Optional[AccountReaderSettings]:
+        """Завантажити налаштування профілю"""
+        return self._load_json_config(
+            self.profile.paths.profile_config_path,
+            AccountReaderSettings,
+            default=base_profile_config,
+            raise_error=True,
+            on_error=self._handle_missing_reader_config
+        )
+
+    def _load_profile_stats(self) -> Optional[AccountStats]:
         """Завантажити статистику профілю"""
-        # TODO: Реалізувати завантаження статистики
-        logger.debug("Profile stats loading not implemented yet")
-        return None
+        return self._load_json_config(
+            self.profile.paths.profile_stats_path,
+            AccountStats
+        )
 
     @handle_app_errors(raise_on_fail=False)
     def _load_http_data(self) -> Optional[AccountHTTPData]:
         """Завантажити HTTP-дані профілю"""
-        try:
-            FileInitializer.ensure_file_with_content(
-                self.profile.paths.network_config_path,
-                content=base_network_config(),
-                is_json=True,
-                raise_error=True,
-                on_error=self._handle_missing_network_config
-            )
-            
-            http_data = AccountHTTPData.from_json(self.profile.paths.network_config_path)
-            logger.debug(f"HTTP data loaded for profile: {self.profile.user_id}")
-            return http_data
-            
-        except Exception as e:
-            logger.error(f"Failed to load HTTP data for profile {self.profile.user_id}: {e}")
-            return None
+        return self._load_json_config(
+            self.profile.paths.network_config_path,
+            AccountHTTPData,
+            default=base_network_config,
+            raise_error=True,
+            on_error=self._handle_missing_network_config
+        )
+
 
     def _handle_missing_network_config(self) -> None:
         """Обробник відсутнього мережевого конфігу"""
@@ -171,16 +170,49 @@ class ProfileStorage:
             "Cannot proceed with account-based HTTP client."
         )
         logger.error(error_msg)
-        raise ProfileNetworkConfigEmptyError(error_msg)
-
-    def reload_http_data(self) -> bool:
-        """Перезавантажити HTTP-дані"""
+        raise ProfileNetworkConfigEmptyException(error_msg)
+    
+    def _handle_missing_reader_config(self) -> None:
+        """Обробник відсутнього читачевого конфігу"""
+        error_msg = (
+            f"Reader configuration for profile '{self.profile.user_id}' is empty. "
+            "Cannot create profile."
+        )
+        logger.error(error_msg)
+        raise ProfileReaderConfigNotFoundException(error_msg)
+        
+    def reload_profile_settings(self) -> bool:
+        """Перезавантажити налаштування профілю"""
         try:
-            self.http_data = self._load_http_data()
-            return self.http_data is not None
+            self.profile_settings = self._load_profile_settings()
+            return self.profile_settings is not None
         except Exception as e:
-            logger.error(f"Failed to reload HTTP data: {e}")
+            logger.error(f"Failed to reload profile settings: {e}")
             return False
+
+    def reload_profile_stats(self) -> bool:
+        """Перезавантажити статистику профілю"""
+        try:
+            self.profile_stats = self._load_profile_stats()
+            return self.profile_stats is not None
+        except Exception as e:
+            logger.error(f"Failed to reload profile stats: {e}")
+            return False
+        
+    @property
+    def is_initialized(self) -> bool:
+        """Перевірити, чи ініціалізовано сховище"""
+        return all([
+            self.http_data is not None,
+            self.profile_settings is not None,
+            self.profile_stats is not None
+        ])
+
+    def __str__(self) -> str:
+        return f"ProfileStorage(user_id={self.profile.user_id}, initialized={self.is_initialized})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
 
 class ProfileHTTP:
@@ -193,14 +225,14 @@ class ProfileHTTP:
     @handle_app_errors(raise_on_fail=True)
     def get_client(self, use_account: bool = True) -> HttpClient:
         """Отримати HTTP-клієнт для профілю"""
+        self.http_data = self.storage._load_http_data()
         if use_account:
             if not self._is_account_data_valid():
                 error_msg = (
                     f"Network configuration for profile '{self.profile.user_id}' "
                     "is missing or default."
                 )
-                logger.error(error_msg)
-                raise ProfileNetworkConfigEmptyError(error_msg)
+                raise ProfileNetworkConfigEmptyException(error_msg)
             
             http_data = self.storage.http_data
             logger.debug(f"Creating HTTP client with account data for: {self.profile.user_id}")
@@ -213,14 +245,10 @@ class ProfileHTTP:
     def _is_account_data_valid(self) -> bool:
         """Перевірити чи валідні дані акаунта"""
         return (
-            self.storage.http_data is not None and 
-            not self.storage.http_data.is_default()
+            self.http_data is not None and 
+            not self.http_data.is_default()
         )
-
-    def refresh_account_data(self) -> bool:
-        """Оновити дані акаунта"""
-        return self.storage.reload_http_data()
-
+ 
 
 class ProfileManager:
     """Менеджер профілів для управління множинними профілями"""

@@ -2,15 +2,17 @@ import logging
 import time
 import requests
 from functools import wraps
-from typing import Callable
+from typing import Callable, TypeVar, ParamSpec
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 def log_http_request(method: str = "GET"):
-    def decorator(func: Callable):
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @wraps(func)
         def wrapper(self, url: str, payload=None, *args, retries: int = 3, timeout: float = 360.0, **kwargs):
             logger.info(f"[{method}] → URL: {url}")
@@ -39,5 +41,5 @@ def log_http_request(method: str = "GET"):
             logger.error(f"[{method}] Failed after {retries} attempts → {url}")
             return None
 
-        return wrapper
+        return wrapper  # type: ignore
     return decorator

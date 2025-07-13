@@ -6,9 +6,10 @@ from typing import Any, Callable, Optional, Union
 import json
 import logging
 
-from app.exceptions.exceptions import (
-    ProfileDirNotFoundError, ProfileNetworkConfigNotFoundError, AppError
-)
+from app.exceptions.registration_exception import ProfileNetworkConfigNotFoundException
+from app.exceptions.path_exceptions import ProfileDirNotFoundException
+from app.exceptions.base_exceptions import AppError
+
 from app.handlers.error_handlers import handle_app_errors
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ class FileInitializer:
             except Exception as e:
                 logger.error(f"Failed to create directory: {path}", exc_info=True)
                 if raise_error:
-                    raise ProfileDirNotFoundError(f"Directory {path} could not be created.", on_error=on_error) from e
+                    raise ProfileDirNotFoundException(f"Directory {path} could not be created.", on_error=on_error) from e
 
     @staticmethod
     def ensure_file_with_content(
@@ -57,7 +58,7 @@ class FileInitializer:
                     path.write_text(str(content), encoding=FileInitializer.DEFAULT_ENCODING)
             except Exception as e:
                 logger.error(f"Failed to create file: {path}", exc_info=True)
-                err_cls = ProfileNetworkConfigNotFoundError if is_json else AppError
+                err_cls = ProfileNetworkConfigNotFoundException if is_json else AppError
                 if raise_error:
                     raise err_cls(f"File {path} could not be created.", on_error=on_error) from e
 

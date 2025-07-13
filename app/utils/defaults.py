@@ -35,3 +35,11 @@ def base_network_config() -> Dict[str, str]:
         "retries": 3,
         "timeout": 360
     }
+    
+def base_profile_config() -> Dict[str, str]:
+    return {
+        "last_chapter": 0,
+        "batch_size": 2,
+        "batch_limit": 100,
+        "current_mode": "tokens"
+    }
