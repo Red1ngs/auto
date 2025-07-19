@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Literal
 
-from app.schemas.models.base_class import JsonSerializable
+from app.execution.models.base_class import JsonSerializable
 
 class Hallmark(BaseModel):
     key: str

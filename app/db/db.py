@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.utils.paths import PROJECT_ROOT
 
-from app.schemas.models.db_models import User
+from app.execution.models.db_models import User
 
 from app.exceptions.db_exceptions import UserNotFoundException, CardNotFoundException
 from app.exceptions.base_exceptions import DataBaseException
@@ -54,8 +54,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
                 username TEXT UNIQUE,
-                image TEXT,
-                category TEXT DEFAULT 'normal' -- добавлено поле category
+                image TEXT
             )
         ''')
         
@@ -84,9 +83,6 @@ class DatabaseManager:
 
             # Индекс для быстрого поиска карточек по card_id
             'CREATE INDEX IF NOT EXISTS idx_cards_card_id ON cards(card_id)',
-
-            # Индекс для поиска пользователей по категории
-            'CREATE INDEX IF NOT EXISTS idx_users_category ON users(category)'
         ]
 
         for index_sql in indexes:
@@ -153,9 +149,9 @@ class UserCardDB(DatabaseManager):
         if not self._check_card_exists(user_id, card_id):
             raise CardNotFoundException(user_id, card_id)
     
-    def add_user(self, user_id: str, username: Optional[str] = None, image: Optional[str] = None, category: Optional[str] = None) -> int:
+    def add_user(self, user_id: str, username: Optional[str] = None, image: Optional[str] = None) -> int:
         """Удобная обертка над add_users для одного пользователя."""
-        user = User(user_id=user_id, username=username, image=image, category=category)
+        user = User(user_id=user_id, username=username, image=image)
         self.add_users([user])
         return user_id
 
@@ -168,8 +164,7 @@ class UserCardDB(DatabaseManager):
                 (
                     u.user_id,
                     u.username,
-                    u.image,
-                    getattr(u, 'category', 'normal') or 'normal'
+                    u.image
                 )
                 for u in users
             ]
@@ -177,12 +172,11 @@ class UserCardDB(DatabaseManager):
             with self._get_connection() as conn:
                 conn.executemany(
                     '''
-                    INSERT INTO users (user_id, username, image, category)
+                    INSERT INTO users (user_id, username, image)
                     VALUES (?, ?, ?, ?)
                     ON CONFLICT(user_id) DO UPDATE SET
                         username = COALESCE(excluded.username, users.username),
-                        image = COALESCE(excluded.image, users.image),
-                        category = COALESCE(excluded.category, users.category)
+                        image = COALESCE(excluded.image, users.image)
                     ''',
                     prepared
                 )
@@ -284,7 +278,7 @@ class UserCardDB(DatabaseManager):
         """Частичное обновление данных пользователя."""
         self._validate_user_exists(user_id)
 
-        allowed_fields = {'username', 'image', 'category'}
+        allowed_fields = {'username', 'image'}
         fields = {k: v for k, v in kwargs.items() if k in allowed_fields and v is not None}
 
         if not fields:
@@ -320,15 +314,6 @@ class UserCardDB(DatabaseManager):
         
         rows = self._fetch_all(query, (user_id,))
         return [dict(row) for row in rows]
-    
-    def get_all_user_categories(self) -> Dict[int, str]:
-        """
-        Получение всех пользователей и их категорий.
-        Возвращает словарь: {user_id: category}.
-        """
-        query = 'SELECT user_id, category FROM users'
-        rows = self._fetch_all(query)
-        return {row["user_id"]: row["category"] for row in rows}
     
     def get_specific_card_for_users(
         self,
@@ -379,8 +364,7 @@ class UserCardDB(DatabaseManager):
             User(
                 user_id=u.get("user_id"),
                 username=u.get("username"),
-                image=u.get("image"),
-                category=u.get("category", "normal")
+                image=u.get("image")
             )
             for u in users if u.get("user_id") is not None
         ]

@@ -4,7 +4,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from app.utils.defaults import base_cookie, base_headers
-from app.schemas.models.base_class import JsonSerializable
+from app.execution.models.base_class import JsonSerializable
 
 class Headers(BaseModel):
     """HTTP-Headers Model"""

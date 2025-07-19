@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.schemas.models.base_class import JsonSerializable
+from app.execution.models.base_class import JsonSerializable
 
 
 class AccountStats(JsonSerializable):

@@ -3,9 +3,9 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from dataclasses import dataclass
 
-from app.schemas.models.http_model import AccountHTTPData
-from app.schemas.models.profile_config_model import AccountReaderSettings
-from app.schemas.models.profile_stats_model import AccountStats
+from app.execution.models.http_model import AccountHTTPData
+from app.execution.models.profile_config_model import AccountReaderSettings
+from app.execution.models.profile_stats_model import AccountStats
 
 from app.exceptions.registration_exception import ProfileNetworkConfigEmptyException, ProfileReaderConfigNotFoundException
 from app.exceptions.base_exceptions import AppError
@@ -98,6 +98,10 @@ class Profile:
             )
             logger.debug(f"Config file ensured: {file_path}")
 
+    async def close(self):
+        """Вызывайте при завершении работы с профилем, чтобы закрыть HTTP-клиент"""
+        await self.http.close()
+        
     def __str__(self) -> str:
         return f"Profile(user_id='{self.user_id}')"
 
@@ -216,36 +220,36 @@ class ProfileStorage:
 
 
 class ProfileHTTP:
-    """Клас для управління HTTP-клієнтом профілю"""
-    
     def __init__(self, profile: Profile):
         self.profile = profile
         self.storage = profile.storage
-
+        self._client: Optional[HttpClient] = None
+    
     @handle_app_errors(raise_on_fail=True)
     def get_client(self, use_account: bool = True) -> HttpClient:
-        """Отримати HTTP-клієнт для профілю"""
-        self.http_data = self.storage._load_http_data()
-        if use_account:
-            if not self._is_account_data_valid():
-                error_msg = (
-                    f"Network configuration for profile '{self.profile.user_id}' "
-                    "is missing or default."
-                )
-                raise ProfileNetworkConfigEmptyException(error_msg)
-            
-            http_data = self.storage.http_data
-            logger.debug(f"Creating HTTP client with account data for: {self.profile.user_id}")
-        else:
-            http_data = None
-            logger.debug(f"Creating HTTP client without account data for: {self.profile.user_id}")
+        if self._client is None:
+            self.http_data = self.storage._load_http_data()
+            if use_account:
+                if not self._is_account_data_valid():
+                    error_msg = (
+                        f"Network configuration for profile '{self.profile.user_id}' "
+                        "is missing or default."
+                    )
+                    raise ProfileNetworkConfigEmptyException(error_msg)
+                http_data = self.http_data
+            else:
+                http_data = None
+            self._client = HttpClient(http_data, use_account=use_account)
+        return self._client
 
-        return HttpClient(http_data, use_account=use_account)
+    async def close(self):
+        if self._client:
+            await self._client.close()
+            self._client = None
 
     def _is_account_data_valid(self) -> bool:
-        """Перевірити чи валідні дані акаунта"""
         return (
-            self.http_data is not None and 
+            self.http_data is not None and
             not self.http_data.is_default()
         )
  

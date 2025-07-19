@@ -3,7 +3,7 @@
 from __future__ import annotations
 from pydantic import Field
 
-from app.schemas.models.base_class import JsonSerializable
+from app.execution.models.base_class import JsonSerializable
 
 
 class AccountReaderSettings(JsonSerializable):

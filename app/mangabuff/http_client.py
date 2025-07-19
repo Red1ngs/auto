@@ -1,39 +1,37 @@
-from __future__ import annotations
 import logging
 import json
-import requests
+import aiohttp
 
-from typing import Dict, Union, Optional, TYPE_CHECKING
+from typing import Dict, Optional
+
+from app.execution.models.http_model import AccountHTTPData
 
 from app.handlers.http_handlers import log_http_request
-
-if TYPE_CHECKING:
-    from app.schemas.models.http_model import AccountHTTPData
 
 logger = logging.getLogger(__name__)
 
 class HttpClient:
-    def __init__(self, http_data: Union[None, AccountHTTPData], *, use_account: bool = True):
+    def __init__(self, http_data: Optional[AccountHTTPData], *, use_account: bool = True):
         self.headers = http_data.headers.model_dump() if use_account else {}
         self.cookie = http_data.cookie.model_dump() if use_account else {}
-        self.use_account = use_account
+        self.session: Optional[aiohttp.ClientSession] = None
+
+    async def init_session(self):
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession(headers=self.headers, cookies=self.cookie)
 
     @log_http_request("POST")
-    def post(self, url: str, payload: Dict, *, retries=3, timeout=360.0) -> Optional[requests.Response]:
-        return requests.post(
-            url,
-            headers=self.headers,
-            cookies=self.cookie,
-            data=json.dumps(payload),
-            timeout=timeout
-        )
+    async def post(self, url: str, payload: Dict, *, retries=3, timeout=1360.0) -> Optional[aiohttp.ClientResponse]:
+        if self.session is None or self.session.closed:
+            await self.init_session()
+        return await self.session.post(url, data=json.dumps(payload), timeout=timeout)
 
     @log_http_request("GET")
-    def get(self, url: str, payload=None, *, retries=3, timeout=360.0) -> Optional[requests.Response]:
-        return requests.get(
-            url,
-            headers=self.headers,
-            cookies=self.cookie,
-            params=payload,
-            timeout=timeout
-        )
+    async def get(self, url: str, payload=None, *, retries=3, timeout=360.0) -> Optional[aiohttp.ClientResponse]:
+        if self.session is None or self.session.closed:
+            await self.init_session()
+        return await self.session.get(url, params=payload, timeout=timeout)
+
+    async def close(self):
+        if self.session and not self.session.closed:
+            await self.session.close()
