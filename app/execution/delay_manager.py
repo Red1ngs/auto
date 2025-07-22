@@ -4,7 +4,7 @@ from typing import Dict, Optional, Any
 from datetime import datetime
 import logging
 
-from app.execution.models.execution_models import (
+from app.models.execution_models import (
     ProxyDelayState, DelayConfig, TaskPriority, ProfileTask
 )
 

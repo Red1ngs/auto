@@ -4,10 +4,10 @@ from typing import Callable, Optional
 from app.exceptions.base_exceptions import AppError, ProfileException
 
 
-class AppConfigMissingException(AppError):
+class StaticConfigMissingException(AppError):
     """Ошибка, возникающая при отсутствии конфигурации приложения."""
 
-    def __init__(self, message: str = "App config is missing.", *, code: int = 500, on_error: Optional[Callable] = None):
+    def __init__(self, message: str = "config is missing.", *, code: int = 500, on_error: Optional[Callable] = None):
         super().__init__(message, code=code, on_error=on_error)
         
         

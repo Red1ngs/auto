@@ -4,7 +4,7 @@ import aiohttp
 
 from typing import Dict, Optional
 
-from app.execution.models.http_model import AccountHTTPData
+from app.models.profile_models import AccountHTTPData
 
 from app.handlers.http_handlers import log_http_request
 

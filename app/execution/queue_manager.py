@@ -3,7 +3,7 @@ import asyncio
 import heapq
 from typing import Dict, Any, Optional, List
 
-from app.execution.models.execution_models import ProfileTask, TaskPriority
+from app.models.execution_models import ProfileTask, TaskPriority
 
 class PriorityTaskQueue:
     """Очередь задач с приоритетами"""
@@ -98,11 +98,6 @@ class PriorityTaskQueue:
                 if task.task_id in self._task_registry:
                     stats[task.priority] += 1
             return stats
-    
-    def task_done(self):
-        """Отметить задачу как выполненную"""
-        # Для совместимости с asyncio.Queue
-        pass
     
     def qsize(self) -> int:
         """Получить размер очереди"""
@@ -200,7 +195,7 @@ class QueueManager:
         """Получить следующую задачу для профиля"""
         # Сначала проверить срочную очередь
         urgent_task = await self._urgent_queue.get(timeout=0.1)
-        if urgent_task and urgent_task.profile_id == profile_id:
+        if urgent_task:
             return urgent_task
         
         # Если в срочной очереди нет задач для этого профиля, проверить обычную очередь
@@ -211,17 +206,22 @@ class QueueManager:
         return None
     
     async def cancel_task(self, profile_id: str, task_id: str) -> bool:
-        """Отменить задачу"""
-        # Проверить в срочной очереди
+        cancelled = False
+
         if await self._urgent_queue.remove_task(task_id):
-            return True
-        
-        # Проверить в очереди профиля
+            cancelled = True
+
         queue = self._profile_queues.get(profile_id)
-        if queue:
-            return await queue.remove_task(task_id)
-        
-        return False
+        if queue and await queue.remove_task(task_id):
+            cancelled = True
+
+        if cancelled:
+            future = self._result_futures.get(profile_id, {}).get(task_id)
+            if future and not future.done():
+                future.cancel()
+
+        return cancelled
+
     
     async def get_profile_queue_stats(self, profile_id: str) -> Dict[str, Any]:
         """Получить статистику очереди профиля"""

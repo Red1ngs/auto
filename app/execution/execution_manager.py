@@ -4,12 +4,12 @@ import logging
 from typing import Dict, List, Optional, Any
 from multiprocessing import Process
 
-from app.execution.models.execution_models import (
+from app.models.execution_models import (
     ExecutionMode, ProfileTask, TaskPriority
 )
 from app.execution.delay_manager import DelayManager
 from app.execution.profile_executor import ProfileExecutor
-from app.execution.queue_manager import QueueManager, PriorityTaskQueue
+from app.execution.queue_manager import QueueManager
 
 from app.profiles.profile_manager import Profile
 
@@ -24,8 +24,6 @@ class ExecutionManager:
         self.queue_manager = QueueManager()
         self.profile_executor = ProfileExecutor(self.delay_manager, self.queue_manager)
         
-        # Черги для задач з пріоритетами
-        self._task_queues: Dict[str, PriorityTaskQueue] = {}
         self._processes: Dict[str, Process] = {}
         
         # Обмеження
@@ -48,6 +46,9 @@ class ExecutionManager:
         
         async def http_request_handler(profile: Profile, params, proxy_id: str = None, task: ProfileTask = None):
             """Обробник HTTP-запитів"""
+            from datetime import datetime
+            now = datetime.now()
+            print(now.strftime("%H:%M:%S"))
             client = profile.http.get_client(use_account=False)
             await client.init_session()
             method = params.get('method', 'GET')
@@ -143,7 +144,6 @@ class ExecutionManager:
         
         # Створити чергу задач з пріоритетами для профілю
         task_queue = await self.queue_manager.create_profile_queue(profile_id)
-        self._task_queues[profile_id] = task_queue
         
         # Додати профіль до проксі
         if proxy_id not in self._proxy_profiles:
@@ -167,7 +167,6 @@ class ExecutionManager:
                 self._proxy_profiles[proxy_id].remove(profile_id)
                 self._global_stats['active_profiles'] -= 1
                 await self.queue_manager.remove_profile_queue(profile_id)
-                del self._task_queues[profile_id]
             
             return success
         else:
@@ -185,8 +184,7 @@ class ExecutionManager:
         
         # Очистити чергу
         await self.queue_manager.remove_profile_queue(profile_id)
-        if profile_id in self._task_queues:
-            del self._task_queues[profile_id]
+
         
         # Оновити статистику
         if self._global_stats['active_profiles'] > 0:

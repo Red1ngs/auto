@@ -1,5 +1,5 @@
 import time
-from typing import Dict
+from typing import Dict, Union
 
 def base_headers() -> Dict[str, str]:
     return {
@@ -26,7 +26,7 @@ def base_cookie() -> Dict[str, str]:
         "theme": "light"
     }
 
-def base_network_config() -> Dict[str, str]:
+def base_network_config() -> Dict[str, Union[str, int]]:
     return {
         "cookie": base_cookie(),
         "headers": base_headers(),
@@ -36,10 +36,19 @@ def base_network_config() -> Dict[str, str]:
         "timeout": 360
     }
     
-def base_profile_config() -> Dict[str, str]:
+def base_profile_config() -> Dict[str, Union[str, int]]:
     return {
         "last_chapter": 0,
         "batch_size": 2,
         "batch_limit": 100,
         "current_mode": "tokens"
+    }
+    
+def base_static_config() -> Dict[str, Union[str, int]]:
+    return {
+        "reader": {
+            "modes": {
+                
+            }
+        }
     }

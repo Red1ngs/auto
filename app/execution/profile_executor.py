@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Optional, Callable, Any
 from datetime import datetime
 
-from app.execution.models.execution_models import (
+from app.models.execution_models import (
     ProfileExecutionState, ProfileStatus, ProfileTask
 )
 from app.execution.delay_manager import DelayManager
@@ -141,8 +141,6 @@ class ProfileExecutor:
                     # Зменшити кількість очікуючих задач
                     if state.pending_tasks > 0:
                         state.pending_tasks -= 1
-                    
-                    task_queue.task_done()
                     
                     logger.debug(f"Completed task {task.task_id} with priority {task.priority.name}")
                     

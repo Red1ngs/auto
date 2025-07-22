@@ -3,16 +3,15 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from dataclasses import dataclass
 
-from app.execution.models.http_model import AccountHTTPData
-from app.execution.models.profile_config_model import AccountReaderSettings
-from app.execution.models.profile_stats_model import AccountStats
+from app.models.profile_models import AccountHTTPData, AccountReaderSettings, StaticConfig
 
 from app.exceptions.registration_exception import ProfileNetworkConfigEmptyException, ProfileReaderConfigNotFoundException
+from app.exceptions.path_exceptions import StaticConfigMissingException
 from app.exceptions.base_exceptions import AppError
 
 from app.utils.paths import ACCOUNTS_DIR
 from app.utils.file_utils import FileInitializer
-from app.utils.defaults import base_network_config, base_profile_config
+from app.utils.defaults import base_network_config, base_profile_config, base_static_config
 
 from app.handlers.error_handlers import handle_app_errors
 
@@ -24,8 +23,9 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ProfilePaths:
     """Централізовані шляхи профілю для кращого управління"""
-    profile_dir: Path
+    account_dir: Path
     images_dir: Path
+    static_config_path: Path
     network_config_path: Path
     profile_config_path: Path
     profile_stats_path: Path
@@ -34,15 +34,17 @@ class ProfilePaths:
     @classmethod
     def from_user_id(cls, user_id: str) -> "ProfilePaths":
         """Створити ProfilePaths з user_id"""
-        profile_dir = ACCOUNTS_DIR / user_id
+        profile_dir = ACCOUNTS_DIR.parent
+        account_dir = ACCOUNTS_DIR / user_id
         
         return cls(
-            profile_dir=profile_dir,
-            images_dir=profile_dir / "images",
-            network_config_path=profile_dir / "network_config.json",
-            profile_config_path=profile_dir / "profile_config.json",
-            profile_stats_path=profile_dir / "profile_stats.json",
-            avatar_path=profile_dir / "avatar.png"
+            account_dir=account_dir,
+            static_config_path = profile_dir / "static_config.json",
+            images_dir=account_dir / "images",
+            network_config_path=account_dir / "network_config.json",
+            profile_config_path=account_dir / "profile_config.json",
+            profile_stats_path=account_dir / "profile_stats.json",
+            avatar_path=account_dir / "avatar.png"
         )
 
 
@@ -52,9 +54,10 @@ class Profile:
     def __init__(self, user_id: str):
         self.user_id = user_id
         self.paths = ProfilePaths.from_user_id(user_id)
-        self._initialize_profile()
         
         self.storage = ProfileStorage(self)
+        self._initialize_profile()
+        
         self.http = ProfileHTTP(self)
 
     @handle_app_errors(raise_on_fail=True)
@@ -73,7 +76,6 @@ class Profile:
     def _create_directories(self) -> None:
         """Створення необхідних директорій"""
         directories = [
-            self.paths.profile_dir,
             self.paths.images_dir
         ]
         
@@ -84,17 +86,18 @@ class Profile:
     def _create_config_files(self) -> None:
         """Створення конфігураційних файлів"""
         config_files = [
-            (self.paths.network_config_path, base_network_config()),
-            (self.paths.profile_config_path, base_profile_config()),
-            (self.paths.profile_stats_path, {})
+            (self.paths.network_config_path, base_network_config(), True, self.storage._handle_missing_network_config),
+            (self.paths.profile_config_path, base_profile_config(), True, self.storage._handle_missing_reader_config),
+            (self.paths.static_config_path, base_static_config(), True, self.storage._handle_missing_static_config)
         ]
         
-        for file_path, content in config_files:
+        for file_path, default, raise_error, on_error in config_files:
             FileInitializer.ensure_file_with_content(
                 file_path,
-                content=content,
-                raise_error=True,
-                is_json=True
+                content=default,
+                is_json=True, 
+                raise_error=raise_error,
+                on_error=on_error
             )
             logger.debug(f"Config file ensured: {file_path}")
 
@@ -106,7 +109,7 @@ class Profile:
         return f"Profile(user_id='{self.user_id}')"
 
     def __repr__(self) -> str:
-        return f"Profile(user_id='{self.user_id}', profile_dir='{self.paths.profile_dir}')"
+        return f"Profile(user_id='{self.user_id}', account_dir='{self.paths.account_dir}')"
 
 
 class ProfileStorage:
@@ -122,18 +125,11 @@ class ProfileStorage:
         logger.info(f"Initializing storage for profile: {self.profile.user_id}")
         
         self.profile_settings = self._load_profile_settings()
-        self.profile_stats = self._load_profile_stats()
+        self.static = self._load_static_config()
         
         logger.info(f"Storage initialized for profile: {self.profile.user_id}")
 
-    def _load_json_config(self, path: Path, model_cls, *, default=None, raise_error=False, on_error=None) -> Optional[Any]:
-        FileInitializer.ensure_file_with_content(
-            path,
-            content=default() if default else None,
-            is_json=True,
-            raise_error=raise_error,
-            on_error=on_error,
-        )
+    def _load_json_config(self, path: Path, model_cls) -> Optional[Any]:
         data = model_cls.from_json(path)
         logger.debug(f"{model_cls.__name__} loaded for profile: {self.profile.user_id}")
         return data
@@ -142,30 +138,15 @@ class ProfileStorage:
         """Завантажити налаштування профілю"""
         return self._load_json_config(
             self.profile.paths.profile_config_path,
-            AccountReaderSettings,
-            default=base_profile_config,
-            raise_error=True,
-            on_error=self._handle_missing_reader_config
+            AccountReaderSettings
         )
-
-    def _load_profile_stats(self) -> Optional[AccountStats]:
-        """Завантажити статистику профілю"""
+        
+    def _load_static_config(self) -> Optional[StaticConfig]:
+        print(self.profile.paths.static_config_path)
         return self._load_json_config(
-            self.profile.paths.profile_stats_path,
-            AccountStats
+            self.profile.paths.static_config_path,
+            StaticConfig
         )
-
-    @handle_app_errors(raise_on_fail=False)
-    def _load_http_data(self) -> Optional[AccountHTTPData]:
-        """Завантажити HTTP-дані профілю"""
-        return self._load_json_config(
-            self.profile.paths.network_config_path,
-            AccountHTTPData,
-            default=base_network_config,
-            raise_error=True,
-            on_error=self._handle_missing_network_config
-        )
-
 
     def _handle_missing_network_config(self) -> None:
         """Обробник відсутнього мережевого конфігу"""
@@ -184,6 +165,11 @@ class ProfileStorage:
         )
         logger.error(error_msg)
         raise ProfileReaderConfigNotFoundException(error_msg)
+    
+    def _handle_missing_static_config(self):
+        error_msg = "App config is missing. Please ensure the static_config.json file exists in the app directory."
+        logger.error(error_msg)
+        raise StaticConfigMissingException(message=error_msg)
         
     def reload_profile_settings(self) -> bool:
         """Перезавантажити налаштування профілю"""
@@ -224,11 +210,18 @@ class ProfileHTTP:
         self.profile = profile
         self.storage = profile.storage
         self._client: Optional[HttpClient] = None
+        
+    @property
+    def http_data(self) -> Optional[AccountHTTPData]:
+        """HTTP-дані профілю (лениве завантаження з файлу)."""
+        return self.storage._load_json_config(
+            self.profile.paths.network_config_path,
+            AccountHTTPData
+        )
     
     @handle_app_errors(raise_on_fail=True)
     def get_client(self, use_account: bool = True) -> HttpClient:
         if self._client is None:
-            self.http_data = self.storage._load_http_data()
             if use_account:
                 if not self._is_account_data_valid():
                     error_msg = (
@@ -236,10 +229,10 @@ class ProfileHTTP:
                         "is missing or default."
                     )
                     raise ProfileNetworkConfigEmptyException(error_msg)
-                http_data = self.http_data
+                data = self.http_data
             else:
-                http_data = None
-            self._client = HttpClient(http_data, use_account=use_account)
+                data = None
+            self._client = HttpClient(data, use_account=use_account)
         return self._client
 
     async def close(self):

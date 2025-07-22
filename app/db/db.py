@@ -9,7 +9,7 @@ from pathlib import Path
 
 from app.utils.paths import PROJECT_ROOT
 
-from app.execution.models.db_models import User
+from app.models.db_models import User
 
 from app.exceptions.db_exceptions import UserNotFoundException, CardNotFoundException
 from app.exceptions.base_exceptions import DataBaseException

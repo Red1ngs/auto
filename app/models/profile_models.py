@@ -1,11 +1,51 @@
-# schemas.models.http_model.py
-
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
+from typing import List, Literal, Dict
 
 from app.utils.defaults import base_cookie, base_headers
-from app.execution.models.base_class import JsonSerializable
+from app.models.base_class import JsonSerializable
 
+class AccountReaderSettings(JsonSerializable):
+    last_chapter: int = Field(default=0, ge=0, description="Last chapter read (not below 0)")
+    batch_size: int = Field(default=2, ge=0, description="Batch size for processing (not below 0)")
+    batch_limit: int = Field(default=100, ge=0, description="Maximum number of items to process in a batch (not below 0)")
+    current_mode: str = Field(default="tokens", description="Current mode of operation, e.g., 'tokens', 'pages'")
+    
+    class Config:
+        extra = "forbid"
+        populate_by_name = True
+
+class Hallmark(BaseModel):
+    key: str
+    value: str | None = None
+
+class Mode(BaseModel):
+    match: Literal["OR", "AND"]
+    request_delay: int
+    hallmarks: List[Hallmark]
+    how_many: int
+
+class ReaderModes(RootModel[Dict[str, Mode]]):
+
+    def __getitem__(self, item: str) -> Mode:
+        return self.root[item]
+
+    def keys(self):
+        return self.root.keys()
+
+    def items(self):
+        return self.root.items()
+
+    def values(self):
+        return self.root.values()
+
+class Reader(BaseModel):
+    modes: ReaderModes
+
+class StaticConfig(JsonSerializable):
+    reader: Reader
+        
+        
 class Headers(BaseModel):
     """HTTP-Headers Model"""
     Host: str

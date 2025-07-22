@@ -8,7 +8,6 @@ class User(BaseModel):
     user_id: str = Field(..., pattern=r"^\d+$", description="ID пользователя (в строке)")
     username: Optional[str] = None
     image: Optional[str] = None
-    category: Optional[str] = None
     lock: Optional[Literal[0, 1]] = Field(default=0)
 
     @field_validator('username', 'image', mode='before')

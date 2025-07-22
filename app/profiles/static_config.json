@@ -1,7 +1,4 @@
 {
-  "app_name": "Auto Looter",
-  "version": "1.0.0",
-  "description": "An auto looter for manga buffs",
   "reader": {
     "modes": {
       "tokens": {

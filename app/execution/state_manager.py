@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import logging
 
-from app.execution.models.execution_models import (
+from app.models.execution_models import (
     ProfileExecutionState, ProxyDelayState, DelayConfig, 
     TaskPriority, ProfileTask, ProfileStatus
 )
@@ -160,7 +160,7 @@ class StateManager:
                 return ProxyDelayState(
                     proxy_id=proxy_data['proxy_id'],
                     current_delay=proxy_data.get('current_delay', 2.0),
-                    base_delay=proxy_data.get('base_delay', 2.0),  # Добавлено
+                    base_delay=proxy_data.get('base_delay', 2.0),
                     last_request_time=datetime.fromisoformat(proxy_data['last_request_time']) if proxy_data.get('last_request_time') else None,
                     success_count=proxy_data.get('success_count', 0),
                     error_count=proxy_data.get('error_count', 0),
