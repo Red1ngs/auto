@@ -13,7 +13,7 @@ def base_headers() -> Dict[str, str]:
         "Sec-Fetch-Site": "same-origin",
         "Sec-Fetch-User": "?1",
         "Priority": "u=0, i",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
+        "User-Agent": "",
         "x-csrf-token": "",
         "x-requested-with": "XMLHttpRequest"
     }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field, RootModel
+from fake_useragent import UserAgent
 from typing import List, Literal, Dict
 
 from app.utils.defaults import base_cookie, base_headers
@@ -44,12 +45,13 @@ class Reader(BaseModel):
 
 class StaticConfig(JsonSerializable):
     reader: Reader
-        
+
+ua = UserAgent()
         
 class Headers(BaseModel):
     """HTTP-Headers Model"""
     Host: str
-    UserAgent: str = Field(alias="User-Agent")
+    UserAgent: str = Field(default_factory=lambda: ua.random, alias="User-Agent")
     Accept: str
     AcceptLanguage: str = Field(alias="Accept-Language")
     AcceptEncoding: str = Field(alias="Accept-Encoding")
@@ -82,7 +84,6 @@ class Cookie(BaseModel):
 class AccountHTTPData(JsonSerializable):
     cookie: Cookie
     headers: Headers
-    proxy: str | None = None
     base_url: str
     data_time: int
     retries: int = 3

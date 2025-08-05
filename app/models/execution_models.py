@@ -6,6 +6,8 @@ from typing import Dict, Any, Optional, List
 from enum import Enum
 import uuid
 
+from app.profiles.profile_manager import profile_manager
+
 class TaskStatus(Enum):
     """Статусы задач"""
     PENDING = "pending"      # Ожидает выполнения
@@ -46,8 +48,9 @@ class ProfileTask:
     
     # Основные поля
     task_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    profile_id: str = ""           # ID профиля, для которого выполняется задача
-    action: str = ""               # Тип действия (например, "login", "scrape", "post")
+    proxy_id: str = "0"
+    profile_id: str = None                   # ID профиля, для которого выполняется задача
+    action: str = None                       # Тип действия (например, "login", "scrape", "post")
     priority: TaskPriority = TaskPriority.NORMAL
     
     # Данные для выполнения
@@ -61,7 +64,10 @@ class ProfileTask:
     
     # Результат выполнения
     status: TaskStatus = TaskStatus.PENDING
-    result: Optional[Dict[str, Any]] = None
+    
+    # Future для асинхронного получения результата
+    result_future: Optional[asyncio.Future] = field(default=None, init=False)
+    
     error: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -71,8 +77,10 @@ class ProfileTask:
     retry_delay: float = 5.0                 # Задержка между повторными попытками
     bypass_adaptive_delay: bool = False      # Пропустить адаптивную задержку для этой задачи
     
-    # Future для асинхронного получения результата
-    result_future: Optional[asyncio.Future] = field(default=None, init=False)
+    @property
+    def profile(self):
+        """Получить профиль по ID"""
+        return profile_manager.get_profile(self.profile_id)
     
     def __lt__(self, other):
         """Сравнение для PriorityQueue (меньший приоритет = выше в очереди)"""
@@ -136,3 +144,7 @@ class ProfileTask:
             'timeout': self.timeout,
             'retry_delay': self.retry_delay
         }
+        
+class StopTaskSentinel:
+    def __lt__(self, other): return False
+    def __eq__(self, other): return self is other
