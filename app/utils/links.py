@@ -16,6 +16,10 @@ class APIEndpoint(str, Enum):
     CHECK_BALANCE = "/balance"
     CLAIM_AWARD = "/balance/claim/{day}"
     
+    # Quiz module
+    START_QUIZ = "/quiz/start"
+    ANSWER_QUIZ = "/quiz/answer"                # {answer: value}
+    
     # Profile activities module
     CHECK_PROFILE = "/users/{user_id}"
     CHECK_CARDS = "/users/{user_id}/cards"
