@@ -29,7 +29,6 @@ class HttpClientService:
         Returns:
             HttpClient: Настроенный HTTP-клиент
         """
-        print(http_data.is_need_update(), "_" * 10)
         if use_account:
             self.validator.validate_network_config(http_data, profile_id)
 
