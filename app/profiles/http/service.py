@@ -1,11 +1,11 @@
 import logging
 from typing import Optional, Dict, Any
 
+from .client import HttpClient
 from app.models.profile_models import AccountHTTPData
-from app.profiles.http_client import HttpClient
 
-from app.profiles.proxy_service import ProxyService
-from app.profiles.config_validator import ConfigValidator
+from app.profiles.proxy.service import ProxyService
+from app.profiles.config.validator import ConfigValidator
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +29,10 @@ class HttpClientService:
         Returns:
             HttpClient: Настроенный HTTP-клиент
         """
+        print(http_data.is_need_update(), "_" * 10)
         if use_account:
             self.validator.validate_network_config(http_data, profile_id)
-            
+
         client = HttpClient(http_data, use_account=use_account)
         
         # Применяем прокси если есть

@@ -31,7 +31,7 @@ def base_network_config() -> Dict[str, Union[str, int]]:
         "cookie": base_cookie(),
         "headers": base_headers(),
         "base_url": "https://mangabuff.ru",
-        "data_time": int(time.time() * 1000),
+        "data_time": int(time.time()),
         "retries": 3,
         "timeout": 360
     }

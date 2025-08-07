@@ -4,8 +4,6 @@ from app.utils.file_utils import FileInitializer
 from app.utils.paths import Paths
 from app.utils.defaults import base_network_config, base_profile_config, base_static_config
 
-from app.handlers.error_handlers import handle_app_errors
-
 logger = logging.getLogger(__name__)
 
 class ProfileInitializer:
@@ -14,7 +12,6 @@ class ProfileInitializer:
     def __init__(self):
         pass
 
-    @handle_app_errors(raise_on_fail=True)
     def initialize_profile(self, profile_id: str, paths: Paths) -> None:
         """Инициализировать профиль."""
         logger.info(f"Initializing profile: {profile_id}")

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from app.models.execution_models import ProfileTask, TaskPriority, ProxyClusterState, StopTaskSentinel
 from app.execution.managers.handlers_manager import BaseHandler, handlers_manager
-from app.proxy.proxy_manager import proxy_manager
+from app.clients.proxy.client import proxy_manager
 
 logger = logging.getLogger(__name__)
 

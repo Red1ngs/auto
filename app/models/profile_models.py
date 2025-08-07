@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, RootModel
 from fake_useragent import UserAgent
 from typing import List, Literal, Dict
 
-from app.utils.defaults import base_cookie, base_headers
+from app.utils.logging_utils import measure_time
 from app.models.base_class import JsonSerializable
 
 class AccountReaderSettings(JsonSerializable):
@@ -93,8 +93,21 @@ class AccountHTTPData(JsonSerializable):
         extra = "allow"
         populate_by_name = True
 
-    def is_default(self) -> bool:
-        return (
-            self.cookie.model_dump(by_alias=True) == base_cookie() and
-            self.headers.model_dump(by_alias=True) == base_headers()
-        )
+    def is_need_update(self) -> bool:
+        cookie = self.cookie.model_dump(by_alias=True)
+        headers = self.headers.model_dump(by_alias=True)
+        age = measure_time(self.data_time)
+
+        invalid_tokens = any([
+            not cookie.get("XSRF-TOKEN"),
+            not cookie.get("mangabuff_session"),
+            not cookie.get("__ddg9_"),
+            not cookie.get("theme"),
+            not headers.get("x-csrf-token"),
+            not headers.get("User-Agent")
+        ])
+
+        return any([
+            invalid_tokens,
+            age >= 86400
+        ])

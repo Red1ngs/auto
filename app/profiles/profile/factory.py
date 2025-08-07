@@ -1,15 +1,17 @@
 import logging
 
 from app.utils.paths import Paths
-from app.proxy.proxy_manager import proxy_manager
+from app.clients.proxy.client import proxy_manager
 
-from app.profiles.config_loader import ConfigLoader
-from app.profiles.config_validator import ConfigValidator
-from app.profiles.profile_init import ProfileInitializer    
-from app.profiles.profile import Profile 
-from app.profiles.config_service import ProfileConfigService
-from app.profiles.http_service import HttpClientService
-from app.profiles.proxy_service import ProxyService  
+from .profile import Profile
+from .init import ProfileInitializer  
+
+from app.profiles.config.loader import ConfigLoader
+from app.profiles.config.validator import ConfigValidator  
+from app.profiles.config.service import ProfileConfigService
+
+from app.profiles.http.service import HttpClientService
+from app.profiles.proxy.service import ProxyService  
 
 logger = logging.getLogger(__name__)
 

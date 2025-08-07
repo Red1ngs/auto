@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 from enum import Enum
 import uuid
 
-from app.profiles.profile_manager import profile_manager
+from app.profiles.profile.manager import profile_manager
 
 class TaskStatus(Enum):
     """Статусы задач"""

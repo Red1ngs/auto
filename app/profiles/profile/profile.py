@@ -1,6 +1,6 @@
-from app.profiles.http_client import HttpClient
-from app.profiles.config_service import ProfileConfigService
-from app.profiles.http_service import HttpClientService
+from app.profiles.http.client import HttpClient
+from app.profiles.config.service import ProfileConfigService
+from app.profiles.http.service import HttpClientService
 from app.utils.paths import Paths
 from typing import Dict, Any, Optional
 

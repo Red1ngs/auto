@@ -3,8 +3,8 @@ from typing import Optional, Dict, Any
 
 from app.utils.paths import Paths
 
-from app.profiles.config_loader import ConfigLoader
-from app.profiles.config_validator import ConfigValidator
+from .loader import ConfigLoader
+from .validator import ConfigValidator
 
 logger = logging.getLogger(__name__)
 

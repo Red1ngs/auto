@@ -1,18 +1,17 @@
 import logging
 from typing import Dict
 
-from app.exceptions.base_exceptions import AppError
-
-from app.proxy.proxy_manager import proxy_manager
+from app.clients.proxy.client import proxy_manager
 from app.utils.paths import Paths
 
-from app.profiles.config_loader import ConfigLoader
-from app.profiles.config_validator import ConfigValidator
-from app.profiles.profile_init import ProfileInitializer
-from app.profiles.profile import Profile
-from app.profiles.config_service import ProfileConfigService
-from app.profiles.http_service import HttpClientService
-from app.profiles.proxy_service import ProxyService
+from .init import ProfileInitializer
+from .profile import Profile
+
+from app.profiles.config.loader import ConfigLoader
+from app.profiles.config.validator import ConfigValidator
+from app.profiles.config.service import ProfileConfigService
+from app.profiles.http.service import HttpClientService
+from app.profiles.proxy.service import ProxyService
 
 
 logger = logging.getLogger(__name__)
@@ -97,7 +96,7 @@ class ProfileManager:
             
             return profile
             
-        except AppError as e:
+        except Exception as e:
             logger.error(f"Failed to get profile {profile_id}: {e}")
             raise
 

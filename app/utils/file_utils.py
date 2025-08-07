@@ -6,12 +6,6 @@ from typing import Any, Callable, Optional, Union
 import json
 import logging
 
-from app.exceptions.registration_exception import ProfileNetworkConfigNotFoundException
-from app.exceptions.path_exceptions import ProfileDirNotFoundException
-from app.exceptions.base_exceptions import AppError
-
-from app.handlers.error_handlers import handle_app_errors
-
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +24,7 @@ class FileInitializer:
             except Exception as e:
                 logger.error(f"Failed to create directory: {path}", exc_info=True)
                 if raise_error:
-                    raise ProfileDirNotFoundException(f"Directory {path} could not be created.", on_error=on_error) from e
+                    raise FileNotFoundError(f"Directory {path} could not be created.", on_error=on_error) from e
 
     @staticmethod
     def ensure_file_with_content(
@@ -58,9 +52,8 @@ class FileInitializer:
                     path.write_text(str(content), encoding=FileInitializer.DEFAULT_ENCODING)
             except Exception as e:
                 logger.error(f"Failed to create file: {path}", exc_info=True)
-                err_cls = ProfileNetworkConfigNotFoundException if is_json else AppError
                 if raise_error:
-                    raise err_cls(f"File {path} could not be created.", on_error=on_error) from e
+                    raise FileNotFoundError(f"File {path} could not be created.", on_error=on_error) from e
 
     @staticmethod
     def delete_file(path: Union[str, Path]) -> None:
@@ -72,7 +65,6 @@ class FileInitializer:
             logger.warning(f"Could not delete file: {path}", exc_info=True)
 
     @staticmethod
-    @handle_app_errors(raise_on_fail=True)
     def read_json(path: Union[str, Path], default: Any = None) -> Any:
         path = Path(path)
         if not path.exists():
@@ -82,7 +74,6 @@ class FileInitializer:
             return json.load(f)
 
     @staticmethod
-    @handle_app_errors(raise_on_fail=True)
     def write_json(
         data: Any,
         path: Union[str, Path],
