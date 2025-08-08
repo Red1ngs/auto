@@ -9,7 +9,7 @@ class BalanceAPI:
         response = await self.client.get(build_url(APIEndpoint.CHECK_BALANCE))
         return await response.text()
 
-    async def claim_daily_reward(self, payload: dict) -> dict:
+    async def claim_daily_reward(self, params: dict) -> dict:
         """Запрос на получение ежедневной награды"""
-        response = await self.client.post(build_url(APIEndpoint.CLAIM_AWARD, path_params=payload))
+        response = await self.client.post(build_url(APIEndpoint.CLAIM_AWARD, path_params=params))
         return await response.json()

@@ -6,6 +6,21 @@ from app.execution.decorators.handler import handler
 
 from app.utils.validators import require_keys
 
+@handler("load_chapters")
+class LoadChaptersHandler(HttpHandler):
+    async def execute(self, task) -> dict:
+        """Обработчик для загрузки глав"""
+        client = task.profile.get_client()
+        api = ChapterAPI(client)
+        
+        return await api.load_chapters(task.payload)
+        
+    async def validate_input(self, task):
+        """Проверка входных данных"""
+        require_keys(task.payload, ["manga_id"])
+        return True
+
+
 @handler("chapter_read")
 class ChapterReadHandler(HttpHandler):
     async def execute(self, task) -> dict:

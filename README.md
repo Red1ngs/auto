@@ -1,1 +1,1 @@
-# mangabuff
+# auto

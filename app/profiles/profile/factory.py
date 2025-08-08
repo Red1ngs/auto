@@ -1,7 +1,7 @@
 import logging
 
 from app.utils.paths import Paths
-from app.clients.proxy.client import proxy_manager
+from app.proxy.manager import proxy_manager
 
 from .profile import Profile
 from .init import ProfileInitializer  

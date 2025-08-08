@@ -32,7 +32,8 @@ class APIEndpoint(str, Enum):
     REJECT_CANCEL = "/trades/{trade_id}/cancel"
     REJECT_ALL_TRADE = "/trades/rejectAll"
     
-    # Read module
+    # Chapter module
+    LOAD_CHAPTERS = "/chapters/load"            # {manga_id: value}
     READ_CHAPTER = "/addHistory?r=702"          # {items: [{chapter_id: value, manga_id: value}]}
     TAKE_CANDY = "/halloween/takeCandy?r=776"   # {token: value}
 

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 PROFILE_DIR = PROJECT_ROOT / "profiles"
-PROXY_DIR = PROJECT_ROOT / "clients/proxy"
+PROXY_DIR = PROJECT_ROOT / "proxy"
 ACCOUNTS_DIR = PROJECT_ROOT.parent / "accounts"
 
 @dataclass

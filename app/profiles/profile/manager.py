@@ -1,7 +1,7 @@
 import logging
 from typing import Dict
 
-from app.clients.proxy.client import proxy_manager
+from app.proxy.manager import proxy_manager
 from app.utils.paths import Paths
 
 from .init import ProfileInitializer
